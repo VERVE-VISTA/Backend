@@ -8,7 +8,7 @@ import {
 import {  reportAdvisor} from '../controllers/reportController.js';
 import {bookAdvisor} from '../controllers/bookingController.js';
 import {makePayment} from '../controllers/paymentController.js';
-import { addRating } from '../controllers/ratingController.js';
+import { addRating } from '../controllers/ratingController.js';  // Ensure path is correct
 const router = express.Router();
 
 // Auth Routes
@@ -20,7 +20,7 @@ router.post('/signinAd', signinAdvisor);
 router.get('/advisors', getAllAdvisors);
 router.get('/advisors/:advisorId', getAdvisorDetails);
 router.post('/advisors/book', bookAdvisor);
-router.post('/advisors/rate', addRating);
+router.post('/advisors/rate/:userId/:advisorId', addRating);
 router.post('/advisors/report', reportAdvisor);
 
 // Payment Route
