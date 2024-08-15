@@ -1,5 +1,5 @@
 import express from 'express';
-import { signup, signin } from '../controllers/userController.js';
+import { signup, signin, signupAdvisor, signinAdvisor } from '../controllers/userController.js';
 import {
   getAllAdvisors,
   getAdvisorDetails,
@@ -14,7 +14,8 @@ const router = express.Router();
 // Auth Routes
 router.post('/signup', signup);
 router.post('/signin', signin);
-
+router.post('/signupAd', signupAdvisor);
+router.post('/signinAd', signinAdvisor);
 // Advisor Routes
 router.get('/advisors', getAllAdvisors);
 router.get('/advisors/:advisorId', getAdvisorDetails);

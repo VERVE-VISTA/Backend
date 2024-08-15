@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5001;
 app.use(express.json());  // Parse JSON bodies
 
 // MongoDB Connection
-mongoose.connect('mongodb+srv://safeG:safeG@cluster0.bzykoxx.mongodb.net/?retryWrites=true&w=majority')
+mongoose.connect('mongodb+srv://safeG:safeG@cluster0.bzykoxx.mongodb.net/MarketingManagement?retryWrites=true&w=majority')
 
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.log(err));
