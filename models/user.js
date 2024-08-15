@@ -26,8 +26,7 @@ const userSchema = new mongoose.Schema({
     }
   },
   availability: {
-    type: Map,
-    of: String,
+    type: [String],  // Changed from Map to Array of Strings
     required: function() {
       return this.role === 'Advisor';
     }
