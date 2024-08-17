@@ -15,17 +15,13 @@ const JWT_SECRET = config.JWT_SECRET;  // Access the secret from your config fil
 
 // Sign-Up Controller for Regular Users
 export const signup = async (req, res) => {
-  const { username, password, name, specialization, hourlyRate, availability } = req.body;
+  const { username, password } = req.body; // Regular users do not have advisor-specific fields
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       username,
       password: hashedPassword,
       role: 'User',  // Automatically set role as User
-      name,
-      specialization,
-      hourlyRate,
-      availability
     });
     await user.save();
     res.status(201).json({ message: 'User created successfully' });
@@ -33,7 +29,6 @@ export const signup = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 // Sign-In Controller for Regular Users
 // Sign-In Controller for Regular Users
 export const signin = async (req, res) => {
@@ -51,14 +46,13 @@ export const signin = async (req, res) => {
 };
 
 
-// Sign-Up Controller for Advisors
 export const signupAdvisor = async (req, res) => {
   upload.single('profilePicture')(req, res, async function (err) {
     if (err) {
       return res.status(500).json({ error: 'Failed to upload image' });
     }
 
-    const { username, password, name, specialization, hourlyRate, availability } = req.body;
+    const { username, password, name, specialization, hourlyRate, availability, servicesOffered, consultationPackageName, consultationPackagePrice, consultationPackageDescription } = req.body;
 
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -69,7 +63,11 @@ export const signupAdvisor = async (req, res) => {
         name,
         specialization,
         hourlyRate,
-        availability,
+        availability,  // No need to parse if it's already a string
+        servicesOffered,
+        consultationPackageName,
+        consultationPackagePrice: Number(consultationPackagePrice), // Convert price to Number
+        consultationPackageDescription,
         profilePicture: req.file ? req.file.path : undefined  // Save image path
       });
       await advisor.save();
@@ -79,6 +77,8 @@ export const signupAdvisor = async (req, res) => {
     }
   });
 };
+
+
 
 // Sign-In Controller for Advisors
 export const signinAdvisor = async (req, res) => {
@@ -237,4 +237,45 @@ export const getUserImage = (req, res) => {
     }
     res.sendFile(imagePath);
   });
+};
+
+export const getAdvisor = async (req, res) => {
+  const { advisorId } = req.params;
+
+  try {
+    // Fetch the advisor by ID
+    const advisor = await User.findById(advisorId)
+      .select('name specialization profilePicture reviews consultationPackageName consultationPackagePrice consultationPackageDescription hourlyRate servicesOffered availability')
+      .populate({
+        path: 'reviews',
+        select: 'rating', // Only fetch the rating from reviews
+      });
+
+    if (!advisor) {
+      return res.status(404).json({ message: 'Advisor not found' });
+    }
+
+    // Format the data to include average ratings
+    const averageRating = advisor.reviews.length > 0
+      ? advisor.reviews.reduce((acc, review) => acc + review.rating, 0) / advisor.reviews.length
+      : 0;
+
+    const formattedAdvisor = {
+      name: advisor.name,
+      specialization: advisor.specialization,
+      profilePicture: advisor.profilePicture,
+      reviews: advisor.reviews.map(review => review.rating), // Return only ratings
+      consultationPackageName: advisor.consultationPackageName,
+      consultationPackagePrice: advisor.consultationPackagePrice,
+      consultationPackageDescription: advisor.consultationPackageDescription,
+      hourlyRate: advisor.hourlyRate,
+      servicesOffered: advisor.servicesOffered,
+      availability: advisor.availability,
+      averageRating: averageRating.toFixed(1), // Calculate the average rating
+    };
+
+    res.status(200).json(formattedAdvisor);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

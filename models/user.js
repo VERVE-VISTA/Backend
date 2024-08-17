@@ -26,16 +26,42 @@ const userSchema = new mongoose.Schema({
     }
   },
   availability: {
-    type: [String],  // Changed from Map to Array of Strings
+    type: [String],  // Changed from String to Array of Strings
     required: function() {
       return this.role === 'Advisor';
     }
   },
+
   reviews: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     rating: { type: Number, required: true },
     comment: { type: String }
-  }]
+  }],
+  // Flattened advisor-specific fields
+  servicesOffered: {
+    type: String,
+    required: function() {
+      return this.role === 'Advisor';
+    }
+  },
+  consultationPackageName: {
+    type: String,
+    required: function() {
+      return this.role === 'Advisor';
+    }
+  },
+  consultationPackagePrice: {
+    type: Number,  // Use Number type for price
+    required: function() {
+      return this.role === 'Advisor';
+    }
+  },
+  consultationPackageDescription: {
+    type: String,
+    required: function() {
+      return this.role === 'Advisor';
+    }
+  }
 });
 
 // Applying conditional validation for Advisor-specific fields
@@ -66,6 +92,34 @@ userSchema.path('availability').validate(function(value) {
   }
   return true;
 }, 'Availability is required for advisors');
+
+userSchema.path('servicesOffered').validate(function(value) {
+  if (this.role === 'Advisor' && !value) {
+    return false;
+  }
+  return true;
+}, 'Services offered is required for advisors');
+
+userSchema.path('consultationPackageName').validate(function(value) {
+  if (this.role === 'Advisor' && !value) {
+    return false;
+  }
+  return true;
+}, 'Consultation package name is required for advisors');
+
+userSchema.path('consultationPackagePrice').validate(function(value) {
+  if (this.role === 'Advisor' && (value === undefined || value === null)) {
+    return false;
+  }
+  return true;
+}, 'Consultation package price is required for advisors');
+
+userSchema.path('consultationPackageDescription').validate(function(value) {
+  if (this.role === 'Advisor' && !value) {
+    return false;
+  }
+  return true;
+}, 'Consultation package description is required for advisors');
 
 const User = mongoose.model('User', userSchema);
 export default User;

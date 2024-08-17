@@ -10,7 +10,7 @@ import {  reportAdvisor} from '../controllers/reportController.js';
 import {bookAdvisor} from '../controllers/bookingController.js';
 import {makePayment} from '../controllers/paymentController.js';
 import { addRating, getAdvisorRatings } from '../controllers/ratingController.js';  // Ensure path is correct
-import {getAdvisors,searchAdvisors} from '../controllers/userController.js';
+import {getAdvisors,searchAdvisors,getAdvisor} from '../controllers/userController.js';
 import { getUserImage } from '../controllers/userController.js';
 
 const router = express.Router();
@@ -33,7 +33,7 @@ router.get('/profile/:userId', getProfile);
 router.post('/advisors/search', searchAdvisors);
 router.post('/advisors/report', reportAdvisor);
 router.get('/image/:imageName', getUserImage);
-
+router.get('/advisor/:advisorId', getAdvisor);
 // Payment Route
 router.post('/payment', makePayment);
 
