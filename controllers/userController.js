@@ -173,13 +173,14 @@ export const getAdvisors = async (req, res) => {
         select: 'rating', // Only fetch the rating from reviews
       });
 
-    // Format the data to include average ratings
+    // Format the data to include average ratings and id
     const formattedAdvisors = advisors.map(advisor => {
       const averageRating = advisor.reviews.length > 0
         ? advisor.reviews.reduce((acc, review) => acc + review.rating, 0) / advisor.reviews.length
         : 0;
 
       return {
+        _id: advisor._id.toString(), // Include advisor id
         name: advisor.name,
         specialization: advisor.specialization,
         profilePicture: advisor.profilePicture,
@@ -192,6 +193,7 @@ export const getAdvisors = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 export const sortAdvisorsByRatingDesc = async (req, res) => {
   try {
@@ -245,7 +247,7 @@ export const getAdvisor = async (req, res) => {
   try {
     // Fetch the advisor by ID
     const advisor = await User.findById(advisorId)
-      .select('name specialization profilePicture reviews consultationPackageName consultationPackagePrice consultationPackageDescription hourlyRate servicesOffered availability')
+      .select(' name specialization profilePicture reviews consultationPackageName consultationPackagePrice consultationPackageDescription hourlyRate servicesOffered availability')
       .populate({
         path: 'reviews',
         select: 'rating', // Only fetch the rating from reviews
