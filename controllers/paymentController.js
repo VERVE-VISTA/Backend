@@ -4,7 +4,7 @@ import Payment from '../models/payment.js';  // Adjust the import path as necess
 const router = express.Router();
 
 export const makePayment = async (req, res) => {
-    const { bookingId, amount, paymentMethod, cardNumber } = req.body;
+    const { bookingId, amount, cardNumber } = req.body;
     try {
       // Validate card number length (assuming simple validation here)
       if (cardNumber.length !== 16) {
