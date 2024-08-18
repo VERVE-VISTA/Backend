@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.js';  // Adjust the import path as necessary
 import config from '../config.js';  // Importing your configuration
 import upload from '../middlewares/multer.js';
+import Review from '../models/review.js'
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -162,21 +163,23 @@ export const searchAdvisors = async (req, res) => {
 };
 
 
-
 export const getAdvisors = async (req, res) => {
   try {
-    // Fetch all users with the role of 'Advisor'
+    // Fetch all users with the role of 'Advisor' including reviews
     const advisors = await User.find({ role: 'Advisor' })
-      .select('name specialization profilePicture reviews') // Select only necessary fields
-      .populate({
-        path: 'reviews',
-        select: 'rating', // Only fetch the rating from reviews
-      });
+      .select('name specialization profilePicture ') // Exclude reviews from selection
+      .lean(); // Convert the result to plain JavaScript objects
 
-    // Format the data to include average ratings and id
-    const formattedAdvisors = advisors.map(advisor => {
-      const averageRating = advisor.reviews.length > 0
-        ? advisor.reviews.reduce((acc, review) => acc + review.rating, 0) / advisor.reviews.length
+    console.log('Advisors without reviews:', advisors); // Debugging line
+
+    // Calculate average rating for each advisor
+    const formattedAdvisors = await Promise.all(advisors.map(async (advisor) => {
+      // Fetch reviews for the current advisor
+      const reviews = await Review.find({ advisor: advisor._id }).select('rating');
+
+      // Calculate the average rating
+      const averageRating = reviews.length > 0
+        ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
         : 0;
 
       return {
@@ -184,15 +187,16 @@ export const getAdvisors = async (req, res) => {
         name: advisor.name,
         specialization: advisor.specialization,
         profilePicture: advisor.profilePicture,
-        averageRating: averageRating.toFixed(1), // Calculate the average rating
+        averageRating: parseFloat(averageRating.toFixed(1)), // Ensure it's a float with one decimal
       };
-    });
+    }));
 
     res.status(200).json(formattedAdvisors);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 
 export const sortAdvisorsByRatingDesc = async (req, res) => {
@@ -245,35 +249,36 @@ export const getAdvisor = async (req, res) => {
   const { advisorId } = req.params;
 
   try {
-    // Fetch the advisor by ID
+    // Fetch the advisor by ID without reviews
     const advisor = await User.findById(advisorId)
-      .select(' name specialization profilePicture reviews consultationPackageName consultationPackagePrice consultationPackageDescription hourlyRate servicesOffered availability')
-      .populate({
-        path: 'reviews',
-        select: 'rating', // Only fetch the rating from reviews
-      });
+      .select('name specialization profilePicture consultationPackageName consultationPackagePrice consultationPackageDescription hourlyRate servicesOffered availability')
+      .lean(); // Convert the result to plain JavaScript objects
 
     if (!advisor) {
       return res.status(404).json({ message: 'Advisor not found' });
     }
 
-    // Format the data to include average ratings
-    const averageRating = advisor.reviews.length > 0
-      ? advisor.reviews.reduce((acc, review) => acc + review.rating, 0) / advisor.reviews.length
+    // Fetch reviews separately to calculate the average rating
+    const reviews = await Review.find({ advisor: advisorId }).select('rating');
+
+    // Calculate the average rating
+    const averageRating = reviews.length > 0
+      ? reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length
       : 0;
 
+    // Format the data to include average rating
     const formattedAdvisor = {
+      _id: advisor._id.toString(), // Include advisor id
       name: advisor.name,
       specialization: advisor.specialization,
       profilePicture: advisor.profilePicture,
-      reviews: advisor.reviews.map(review => review.rating), // Return only ratings
       consultationPackageName: advisor.consultationPackageName,
       consultationPackagePrice: advisor.consultationPackagePrice,
       consultationPackageDescription: advisor.consultationPackageDescription,
       hourlyRate: advisor.hourlyRate,
       servicesOffered: advisor.servicesOffered,
       availability: advisor.availability,
-      averageRating: averageRating.toFixed(1), // Calculate the average rating
+      averageRating: parseFloat(averageRating.toFixed(1)), // Ensure it's a float with one decimal
     };
 
     res.status(200).json(formattedAdvisor);
@@ -281,3 +286,5 @@ export const getAdvisor = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
