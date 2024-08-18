@@ -5,6 +5,8 @@ import {
   getAdvisorDetails,
 } from '../controllers/advisorController.js';
 import { sortAdvisorsByRatingDesc } from '../controllers/userController.js';
+import { sendMessageFromUserToAdvisor,sendMessageFromAdvisorToUser,getMessagesBetweenUserAndAdvisor,getMessagesBetweenAdvisorAndUser } from '../controllers/chatController.js'; // Adjust path as necessary
+
 
 import {  reportAdvisor} from '../controllers/reportController.js';
 import {bookAdvisor} from '../controllers/bookingController.js';
@@ -36,5 +38,10 @@ router.get('/image/:imageName', getUserImage);
 router.get('/advisor/:advisorId', getAdvisor);
 // Payment Route
 router.post('/payment', makePayment);
+// Messaging routes
+router.post('/sendMessage/userToAdvisor', sendMessageFromUserToAdvisor);
+router.post('/sendMessage/advisorToUser', sendMessageFromAdvisorToUser);
+router.get('/messages/user/:userId/advisor/:advisorId', getMessagesBetweenUserAndAdvisor);
+router.get('/messages/advisor/:advisorId/user/:userId', getMessagesBetweenAdvisorAndUser);
 
 export default router;
