@@ -129,15 +129,20 @@ export const sendMessageFromUserToAdvisor = async (req, res) => {
   
   
   // Function to get messages between an Advisor and a User
-  export const getMessagesBetweenAdvisorAndUser = async (req, res) => {
+// Function to get messages between an Advisor and a User
+export const getMessagesBetweenAdvisorAndUser = async (req, res) => {
     const { advisorId, userId } = req.params;
   
     try {
-      // Fetch chat messages between the Advisor and the User
+      // Fetch chat messages between an Advisor and a User
       const chatMessages = await Chat.find({
         $or: [
           { sender: advisorId, receiver: userId },
           { sender: userId, receiver: advisorId }
+        ],
+        $and: [
+          { 'sender.role': 'Advisor' },
+          { 'receiver.role': 'User' }
         ]
       }).sort({ timestamp: 1 });  // Sort by timestamp ascending
   
@@ -146,3 +151,4 @@ export const sendMessageFromUserToAdvisor = async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   };
+  

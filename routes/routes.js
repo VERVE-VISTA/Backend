@@ -13,7 +13,7 @@ import {bookAdvisor} from '../controllers/bookingController.js';
 import {makePayment} from '../controllers/paymentController.js';
 import { addRating, getAdvisorRatings } from '../controllers/ratingController.js';  // Ensure path is correct
 import {getAdvisors,searchAdvisors,getAdvisor} from '../controllers/userController.js';
-import { getUserImage } from '../controllers/userController.js';
+import { getUserImage,getSuccessfulPaymentsAndUsers } from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -43,5 +43,6 @@ router.post('/sendMessage/userToAdvisor', sendMessageFromUserToAdvisor);
 router.post('/sendMessage/advisorToUser', sendMessageFromAdvisorToUser);
 router.get('/messages/user/:userId/advisor/:advisorId', getMessagesBetweenUserAndAdvisor);
 router.get('/messages/advisor/:advisorId/user/:userId', getMessagesBetweenAdvisorAndUser);
+router.get('/advisor/:advisorId/payments', getSuccessfulPaymentsAndUsers);
 
 export default router;

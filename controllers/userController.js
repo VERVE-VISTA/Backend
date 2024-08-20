@@ -2,10 +2,12 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';  // Adjust the import path as necessary
+import Payment from '../models/payment.js';  // Import Payment model
+import Booking from '../models/booking.js';  // Import Booking model
+
 import config from '../config.js';  // Importing your configuration
 import upload from '../middlewares/multer.js';
 import Review from '../models/review.js'
-import Chat from '../models/chat.js'
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -91,13 +93,11 @@ export const signinAdvisor = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials or not an advisor' });
     }
     const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET);
-    res.json({ token, userId: user._id });
+    res.json({ token, advisorId: user._id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
-export default router;
 
 
 // Fetch User Profile Controller
@@ -289,108 +289,66 @@ export const getAdvisor = async (req, res) => {
 };
 
 
-// Function for User-to-Advisor messages
-export const sendMessageFromUserToAdvisor = async (req, res) => {
-  const { senderId, receiverId, message } = req.body;
+
+export const getSuccessfulPaymentsAndUsers = async (req, res) => {
+  const { advisorId } = req.params;
 
   try {
-    // Check if sender is a User and receiver is an Advisor
-    const sender = await User.findById(senderId);
-    const receiver = await User.findById(receiverId);
+    // Find all bookings for the advisor
+    const bookings = await Booking.find({ advisorId }).lean();
 
-    if (!sender || !receiver) {
-      return res.status(404).json({ message: 'Sender or receiver not found' });
+    if (bookings.length === 0) {
+      return res.status(404).json({ message: 'No bookings found for this advisor' });
     }
 
-    if (sender.role !== 'User') {
-      return res.status(400).json({ message: 'Sender must be a User' });
+    // Extract booking IDs from the bookings
+    const bookingIds = bookings.map(booking => booking._id);
+
+    // Find successful payments for the extracted booking IDs
+    const successfulPayments = await Payment.find({
+      bookingId: { $in: bookingIds },
+      status: 'Success'
+    }).lean();
+
+    if (successfulPayments.length === 0) {
+      return res.status(404).json({ message: 'No successful payments found for these bookings' });
     }
 
-    if (receiver.role !== 'Advisor') {
-      return res.status(400).json({ message: 'Receiver must be an Advisor' });
-    }
+    // Create a mapping of booking IDs to their communication methods
+    const bookingMap = bookings.reduce((map, booking) => {
+      map[booking._id.toString()] = booking.communicationMethod;
+      return map;
+    }, {});
 
-    // Create and save the message
-    const chatMessage = new Chat({
-      sender: senderId,
-      receiver: receiverId,
-      message
+    // Extract user IDs from the successful payments and map them to their communication methods
+    const userPayments = successfulPayments.map(payment => {
+      const booking = bookings.find(b => b._id.toString() === payment.bookingId.toString());
+      return {
+        userId: booking?.userId,
+        communicationMethod: bookingMap[payment.bookingId.toString()]
+      };
+    }).filter(Boolean);
+
+    // Extract unique user IDs from the user payments
+    const userIds = [...new Set(userPayments.map(payment => payment.userId))];
+
+    // Fetch user details based on extracted user IDs
+    const users = await User.find({ _id: { $in: userIds } })
+      .select('username')  // Select only the username field
+      .lean();
+
+    // Create a list of user details
+    const userCommunications = userPayments.map(payment => {
+      return {
+        userId: payment.userId,
+        username: users.find(user => user._id.toString() === payment.userId.toString())?.username,
+        communicationMethod: payment.communicationMethod
+      };
     });
 
-    await chatMessage.save();
-    res.status(201).json({ message: 'Message sent successfully', chatMessage });
+    res.status(200).json(userCommunications);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-// Function for Advisor-to-User messages
-export const sendMessageFromAdvisorToUser = async (req, res) => {
-  const { senderId, receiverId, message } = req.body;
 
-  try {
-    // Check if sender is an Advisor and receiver is a User
-    const sender = await User.findById(senderId);
-    const receiver = await User.findById(receiverId);
-
-    if (!sender || !receiver) {
-      return res.status(404).json({ message: 'Sender or receiver not found' });
-    }
-
-    if (sender.role !== 'Advisor') {
-      return res.status(400).json({ message: 'Sender must be an Advisor' });
-    }
-
-    if (receiver.role !== 'User') {
-      return res.status(400).json({ message: 'Receiver must be a User' });
-    }
-
-    // Create and save the message
-    const chatMessage = new Chat({
-      sender: senderId,
-      receiver: receiverId,
-      message
-    });
-
-    await chatMessage.save();
-    res.status(201).json({ message: 'Message sent successfully', chatMessage });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-
-};
-
-export const getMessagesBetweenUserAndAdvisor = async (req, res) => {
-  const { userId, advisorId } = req.params;
-
-  try {
-    // Fetch chat messages between the User and the Advisor
-    const chatMessages = await Chat.find({
-      $or: [
-        { sender: userId, receiver: advisorId },
-        { sender: advisorId, receiver: userId }
-      ]
-    }).sort({ timestamp: 1 });  // Sort by timestamp ascending
-
-    res.status(200).json(chatMessages);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-// Function to get messages between an Advisor and a User
-export const getMessagesBetweenAdvisorAndUser = async (req, res) => {
-  const { advisorId, userId } = req.params;
-
-  try {
-    // Fetch chat messages between the Advisor and the User
-    const chatMessages = await Chat.find({
-      $or: [
-        { sender: advisorId, receiver: userId },
-        { sender: userId, receiver: advisorId }
-      ]
-    }).sort({ timestamp: 1 });  // Sort by timestamp ascending
-
-    res.status(200).json(chatMessages);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
